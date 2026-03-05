@@ -1,4 +1,4 @@
-"""Tests for chart generation — verifies all 8 PNGs are produced."""
+"""Tests for chart generation -- verifies all 8 PNGs are produced."""
 from __future__ import annotations
 
 import math
@@ -10,6 +10,7 @@ import pytest
 
 from alpha_pipeline.analysis.loader import load_feature_vectors, vectors_to_feature_frames
 from alpha_pipeline.analysis.report import generate_report
+from alpha_pipeline.data.collector import FeatureCollector
 from alpha_pipeline.schemas.enums import ExchangeId
 from alpha_pipeline.schemas.feature import FeatureOutput, FeatureVector
 
@@ -133,36 +134,43 @@ def _make_markout(i: int, ts: datetime) -> FeatureOutput:
     )
 
 
+def _write_synthetic(tmp_path: Path) -> Path:
+    """Write synthetic vectors to Parquet via the collector."""
+    collector = FeatureCollector(tmp_path, flush_every=0)
+    for i in range(N):
+        ts = _ts(i)
+        vec = FeatureVector(
+            timestamp=ts,
+            market_id="mkt_test",
+            exchange=ExchangeId.POLYMARKET,
+            features=(
+                _make_arb(i, ts),
+                _make_tob(i, ts),
+                _make_buy_sell(i, ts),
+                _make_pricing(i, ts),
+                _make_size(i, ts),
+                _make_spread(i, ts),
+                _make_markout(i, ts),
+            ),
+        )
+        collector.write(vec)
+    collector.close()
+    files = sorted(tmp_path.glob("*.parquet"))
+    assert len(files) >= 1
+    return files[0]
+
+
 @pytest.fixture
-def synthetic_jsonl(tmp_path) -> Path:
-    """Generate a JSONL file with all 7 features across N data points."""
+def synthetic_parquet(tmp_path) -> Path:
+    """Generate a Parquet file with all 7 features across N data points."""
     random.seed(42)
-    path = tmp_path / "features_2026-03-05.jsonl"
-    with open(path, "wb") as f:
-        for i in range(N):
-            ts = _ts(i)
-            vec = FeatureVector(
-                timestamp=ts,
-                market_id="mkt_test",
-                exchange=ExchangeId.POLYMARKET,
-                features=(
-                    _make_arb(i, ts),
-                    _make_tob(i, ts),
-                    _make_buy_sell(i, ts),
-                    _make_pricing(i, ts),
-                    _make_size(i, ts),
-                    _make_spread(i, ts),
-                    _make_markout(i, ts),
-                ),
-            )
-            f.write(vec.to_json_bytes() + b"\n")
-    return path
+    return _write_synthetic(tmp_path)
 
 
-def test_all_charts_generated(synthetic_jsonl, tmp_path):
+def test_all_charts_generated(synthetic_parquet, tmp_path):
     """generate_report produces all 8 PNGs (7 features, markouts = 2)."""
     chart_dir = tmp_path / "charts"
-    saved = generate_report([synthetic_jsonl], chart_dir)
+    saved = generate_report([synthetic_parquet], chart_dir)
 
     assert len(saved) == 8
 
@@ -185,11 +193,11 @@ def test_all_charts_generated(synthetic_jsonl, tmp_path):
         assert p.stat().st_size > 0
 
 
-def test_filter_by_market(synthetic_jsonl, tmp_path):
+def test_filter_by_market(synthetic_parquet, tmp_path):
     """Charts only include filtered market data."""
     chart_dir = tmp_path / "charts"
     saved = generate_report(
-        [synthetic_jsonl], chart_dir, market_id="nonexistent"
+        [synthetic_parquet], chart_dir, market_id="nonexistent"
     )
     assert saved == []
 
@@ -212,20 +220,22 @@ def test_single_data_point(tmp_path):
             _make_markout(0, ts),
         ),
     )
-    jsonl = tmp_path / "single.jsonl"
-    with open(jsonl, "wb") as f:
-        f.write(vec.to_json_bytes() + b"\n")
+    data_dir = tmp_path / "data"
+    collector = FeatureCollector(data_dir, flush_every=0)
+    collector.write(vec)
+    collector.close()
+    parquet_file = sorted(data_dir.glob("*.parquet"))[0]
 
     chart_dir = tmp_path / "charts"
-    saved = generate_report([jsonl], chart_dir)
+    saved = generate_report([parquet_file], chart_dir)
     # Should produce charts even with 1 point (markout curve may skip if < 2 samples)
     assert len(saved) >= 6
 
 
 def test_empty_input(tmp_path):
-    """Empty file produces no charts."""
-    empty = tmp_path / "empty.jsonl"
-    empty.touch()
+    """Empty directory produces no charts."""
+    data_dir = tmp_path / "empty_data"
+    data_dir.mkdir()
     chart_dir = tmp_path / "charts"
-    saved = generate_report([empty], chart_dir)
+    saved = generate_report([data_dir], chart_dir)
     assert saved == []

@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     feature_output_dir: str = "./output"
 
+    # Orderbook
+    orderbook_depth_levels: int = 10
+
+    # Metrics
+    metrics_enabled: bool = True
+    metrics_port: int = 8000
+
     # Market matching
     market_matching_config: str = "config/markets.yaml"
 

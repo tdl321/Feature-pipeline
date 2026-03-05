@@ -49,6 +49,8 @@ class PolymarketAdapter:
         self._trade_queue: asyncio.Queue[NormalizedTrade] = asyncio.Queue()
         self._running = False
         self._tasks: list[asyncio.Task[None]] = []
+        # Incremental book state: {asset_id: {"bids": {price: size}, "asks": {price: size}, "market": str}}
+        self._books: dict[str, dict] = {}
 
     # -- Protocol properties / lifecycle ------------------------------------
 
@@ -69,6 +71,7 @@ class PolymarketAdapter:
         for task in self._tasks:
             task.cancel()
         self._tasks.clear()
+        self._books.clear()
         if self._ws:
             await self._ws.close()
             self._ws = None
@@ -135,22 +138,18 @@ class PolymarketAdapter:
         if event_type == "book":
             await self._handle_book(data)
         elif event_type == "price_change":
-            await self._handle_book(data)  # treat as full refresh
+            await self._handle_price_change(data)
         elif event_type in ("trade", "last_trade_price"):
             await self._handle_trade(data)
 
     async def _handle_book(self, data: dict) -> None:
+        """Handle a full book snapshot — replaces book state entirely."""
         market_id = data.get("market", "")
         asset_id = data.get("asset_id", market_id)
 
-        bids_raw = [
-            (float(b["price"]), float(b["size"]))
-            for b in data.get("bids", [])
-        ]
-        asks_raw = [
-            (float(a["price"]), float(a["size"]))
-            for a in data.get("asks", [])
-        ]
+        bids = {b["price"]: b["size"] for b in data.get("bids", [])}
+        asks = {a["price"]: a["size"] for a in data.get("asks", [])}
+        self._books[asset_id] = {"bids": bids, "asks": asks, "market": market_id}
 
         ts_raw = data.get("timestamp")
         exchange_ts = (
@@ -158,10 +157,82 @@ class PolymarketAdapter:
             if ts_raw
             else None
         )
+        await self._emit_book(asset_id, exchange_ts)
+
+    async def _handle_price_change(self, data: dict) -> None:
+        """Handle incremental price_change — upsert/delete individual levels."""
+        market_id = data.get("market", "")
+        ts_raw = data.get("timestamp")
+        exchange_ts = (
+            datetime.fromtimestamp(int(ts_raw) / 1000, tz=timezone.utc)
+            if ts_raw
+            else None
+        )
+
+        changed_assets: set[str] = set()
+        for change in data.get("price_changes", []):
+            asset_id = change.get("asset_id", market_id)
+            price = change["price"]
+            size = change["size"]
+            side_str = change.get("side", "").upper()
+            side_key = "bids" if side_str == "BUY" else "asks"
+
+            # Initialize book if we missed the snapshot
+            if asset_id not in self._books:
+                self._books[asset_id] = {"bids": {}, "asks": {}, "market": market_id}
+
+            book_side = self._books[asset_id][side_key]
+            if size == "0":
+                book_side.pop(price, None)
+            else:
+                book_side[price] = size
+
+            changed_assets.add(asset_id)
+
+        for asset_id in changed_assets:
+            await self._emit_book(asset_id, exchange_ts)
+
+    async def _emit_book(
+        self, asset_id: str, exchange_ts: datetime | None
+    ) -> None:
+        """Convert accumulated book state to NormalizedOrderbook and enqueue.
+
+        The full book state is kept in ``_books`` for correct incremental
+        updates, but we truncate to the top N levels (from
+        ``settings.orderbook_depth_levels``) before emitting.  This avoids
+        creating ``OrderbookLevel`` objects for deep levels that are never
+        used by downstream features.
+        """
+        book = self._books.get(asset_id)
+        if book is None:
+            return
+
+        max_depth = self._settings.orderbook_depth_levels
+
+        # Sort bids descending by price, take top N
+        bids_raw = sorted(
+            (
+                (float(p), float(s))
+                for p, s in book["bids"].items()
+                if float(s) > 0
+            ),
+            key=lambda x: x[0],
+            reverse=True,
+        )[:max_depth]
+
+        # Sort asks ascending by price, take top N
+        asks_raw = sorted(
+            (
+                (float(p), float(s))
+                for p, s in book["asks"].items()
+                if float(s) > 0
+            ),
+            key=lambda x: x[0],
+        )[:max_depth]
 
         ob = NormalizedOrderbook.from_raw(
             exchange=ExchangeId.POLYMARKET,
-            market_id=market_id,
+            market_id=book["market"],
             asset_id=asset_id,
             outcome=OutcomeType.YES,
             bids_raw=bids_raw,

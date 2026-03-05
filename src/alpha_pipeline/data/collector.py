@@ -1,57 +1,96 @@
-"""JSONL sink for persisting FeatureVectors to disk."""
+"""Parquet sink for persisting FeatureVectors to disk."""
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
+
+import orjson
+import polars as pl
 
 from alpha_pipeline.schemas.feature import FeatureVector
 from alpha_pipeline.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Default number of vectors buffered before flushing to a Parquet chunk file.
+_DEFAULT_FLUSH_EVERY = 100
+
 
 class FeatureCollector:
-    """Appends FeatureVectors as JSONL lines to date-partitioned files.
+    """Buffers FeatureVectors and flushes them to date-partitioned Parquet files.
 
-    Files are named ``features_YYYY-MM-DD.jsonl`` under *output_dir*.
-    Uses append-binary mode with flush-per-write for crash safety.
-    Automatically rotates to a new file when the date changes.
+    Each flush creates a new chunk file named
+    ``features_YYYY-MM-DD_HHMMSS.parquet`` under *output_dir*.  The loader
+    globs ``*.parquet`` so multiple chunks per day are fine.
+
+    Parameters
+    ----------
+    output_dir:
+        Directory where Parquet files are written.  Created if it does not
+        exist.
+    flush_every:
+        Number of vectors to buffer before writing a Parquet chunk.  Set to
+        ``0`` to disable automatic flushing (only flushes on ``close()``).
     """
 
-    def __init__(self, output_dir: str | Path) -> None:
+    def __init__(
+        self,
+        output_dir: str | Path,
+        *,
+        flush_every: int = _DEFAULT_FLUSH_EVERY,
+    ) -> None:
         self._output_dir = Path(output_dir)
         self._output_dir.mkdir(parents=True, exist_ok=True)
-        self._current_date: date | None = None
-        self._file = None
+        self._flush_every = flush_every
+        self._buffer: list[dict] = []
 
-    def _filename_for_date(self, d: date) -> Path:
-        return self._output_dir / f"features_{d.isoformat()}.jsonl"
+    # -- internal helpers ----------------------------------------------------
 
-    def _ensure_file(self, d: date) -> None:
-        """Open or rotate the output file for the given date."""
-        if self._current_date == d and self._file is not None:
+    @staticmethod
+    def _vector_to_rows(vector: FeatureVector) -> list[dict]:
+        """Flatten a FeatureVector into one dict per FeatureOutput."""
+        rows: list[dict] = []
+        for feat in vector.features:
+            rows.append({
+                "timestamp": vector.timestamp,
+                "market_id": vector.market_id,
+                "exchange": vector.exchange.value,
+                "feature_name": feat.feature_name,
+                "values_json": orjson.dumps(feat.values).decode("utf-8"),
+            })
+        return rows
+
+    def _flush_buffer(self) -> None:
+        """Write the current buffer to a new Parquet chunk file."""
+        if not self._buffer:
             return
-        self.close()
-        path = self._filename_for_date(d)
-        self._file = open(path, "ab")  # noqa: SIM115
-        self._current_date = d
-        logger.info("collector_file_opened", path=str(path))
+
+        df = pl.DataFrame(self._buffer)
+        # Use the date from the first row and current time for the filename.
+        first_ts = self._buffer[0]["timestamp"]
+        d = first_ts.date() if isinstance(first_ts, datetime) else first_ts
+        now = datetime.now(tz=timezone.utc)
+        chunk_name = f"features_{d.isoformat()}_{now.strftime('%H%M%S')}.parquet"
+        path = self._output_dir / chunk_name
+        df.write_parquet(path)
+        logger.info("collector_chunk_written", path=str(path), rows=len(self._buffer))
+        self._buffer.clear()
+
+    # -- public API ----------------------------------------------------------
 
     def write(self, vector: FeatureVector) -> None:
-        """Persist a single FeatureVector as a JSONL line."""
-        today = vector.timestamp.date()
-        self._ensure_file(today)
-        line = vector.to_json_bytes() + b"\n"
-        self._file.write(line)
-        self._file.flush()
+        """Buffer a single FeatureVector for later Parquet flush."""
+        self._buffer.extend(self._vector_to_rows(vector))
+        if self._flush_every > 0 and len(self._buffer) >= self._flush_every:
+            self._flush_buffer()
+
+    def flush(self) -> None:
+        """Force-flush any buffered rows to a Parquet chunk file."""
+        self._flush_buffer()
 
     def close(self) -> None:
-        """Flush and close the current file handle."""
-        if self._file is not None:
-            self._file.flush()
-            self._file.close()
-            self._file = None
-            self._current_date = None
+        """Flush remaining buffer and release resources."""
+        self._flush_buffer()
 
     def __enter__(self) -> FeatureCollector:
         return self

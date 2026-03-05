@@ -65,7 +65,7 @@ class AvgOrderSize(Feature):
             return None
 
         latest_ts = df["timestamp"][-1]
-        window_start = latest_ts - timedelta(seconds=window_seconds)
+        window_start = latest_ts - window_seconds
         windowed = df.filter(pl.col("timestamp") >= window_start)
 
         if windowed.is_empty():

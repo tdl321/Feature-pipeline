@@ -88,7 +88,7 @@ class SpreadDynamics(Feature):
 
         # Rolling window for percentile and average
         latest_ts = latest_row["timestamp"]
-        window_start = latest_ts - timedelta(seconds=window_seconds)
+        window_start = latest_ts - window_seconds
         windowed = df.filter(pl.col("timestamp") >= window_start)
 
         spreads = windowed["spread_raw"].drop_nulls().to_list()

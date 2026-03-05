@@ -111,11 +111,12 @@ class DataManager:
 
     async def _consume_orderbooks(self, adapter: Any) -> None:
         """Read from an adapter's orderbook stream and buffer records."""
+        max_depth = self._settings.orderbook_depth_levels
         async for ob in adapter.stream_orderbooks():
             if not self._running:
                 break
             buf = self.get_orderbook_buffer(ob.market_id)
-            record = _orderbook_to_record(ob)
+            record = _orderbook_to_record(ob, max_depth=max_depth)
             buf.append(record)
             await self._event_queue.put({
                 "type": DataEventType.ORDERBOOK_SNAPSHOT,
@@ -153,8 +154,18 @@ class DataManager:
 
 # -- Record builders (pure functions) ---------------------------------------
 
-def _orderbook_to_record(ob: NormalizedOrderbook) -> dict[str, Any]:
-    """Flatten a ``NormalizedOrderbook`` into a dict suitable for buffering."""
+def _orderbook_to_record(
+    ob: NormalizedOrderbook, *, max_depth: int = 10
+) -> dict[str, Any]:
+    """Flatten a ``NormalizedOrderbook`` into a dict suitable for buffering.
+
+    ``max_depth`` controls how many top levels are included in the
+    ``top_n_bid_depth`` / ``top_n_ask_depth`` aggregate fields.  The full
+    ``bid_depth`` / ``ask_depth`` fields sum *all* levels in the book for
+    backward compatibility.
+    """
+    top_bids = ob.bids[:max_depth]
+    top_asks = ob.asks[:max_depth]
     return {
         "timestamp": time.time(),
         "exchange": ob.exchange,
@@ -167,6 +178,8 @@ def _orderbook_to_record(ob: NormalizedOrderbook) -> dict[str, Any]:
         "spread": ob.spread,
         "bid_depth": sum(level.size for level in ob.bids),
         "ask_depth": sum(level.size for level in ob.asks),
+        "top_n_bid_depth": sum(level.size for level in top_bids),
+        "top_n_ask_depth": sum(level.size for level in top_asks),
         "n_bid_levels": len(ob.bids),
         "n_ask_levels": len(ob.asks),
         "best_bid_size": ob.bids[0].size if ob.bids else 0.0,

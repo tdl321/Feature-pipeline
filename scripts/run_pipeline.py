@@ -19,6 +19,7 @@ from alpha_pipeline.data.manager import DataManager
 from alpha_pipeline.data.adapters.polymarket import PolymarketAdapter
 from alpha_pipeline.features.registry import FeatureRegistry
 from alpha_pipeline.features.runner import FeatureRunner
+from alpha_pipeline.metrics import MetricsCollector
 from alpha_pipeline.schemas.feature import FeatureVector
 from alpha_pipeline.utils.logging import setup_logging, get_logger
 
@@ -26,6 +27,7 @@ from alpha_pipeline.utils.logging import setup_logging, get_logger
 import alpha_pipeline.features.categories.cross_exchange.arb_spread  # noqa: F401
 import alpha_pipeline.features.categories.order_flow.tob_imbalance  # noqa: F401
 import alpha_pipeline.features.categories.order_flow.buy_sell_imbalance  # noqa: F401
+import alpha_pipeline.features.categories.order_flow.wash_detection  # noqa: F401
 import alpha_pipeline.features.categories.toxicity.markouts  # noqa: F401
 import alpha_pipeline.features.categories.pricing.binary_implied_prob  # noqa: F401
 import alpha_pipeline.features.categories.size_signals.avg_order_size  # noqa: F401
@@ -38,6 +40,7 @@ logger = get_logger(__name__)
 async def log_output(
     output_queue: asyncio.Queue[FeatureVector],
     collector: FeatureCollector,
+    metrics: MetricsCollector | None = None,
 ) -> None:
     """Log and persist feature vectors as they arrive."""
     while True:
@@ -51,8 +54,31 @@ async def log_output(
                 features={f.feature_name: f.values for f in vector.features},
             )
             collector.write(vector)
+            if metrics is not None:
+                metrics.observe_vector(vector)
         except asyncio.TimeoutError:
             continue
+        except asyncio.CancelledError:
+            break
+
+
+async def poll_infrastructure_metrics(
+    metrics: MetricsCollector,
+    data_manager: DataManager,
+    output_queue: asyncio.Queue[FeatureVector],
+) -> None:
+    """Periodically push buffer/queue sizes into Prometheus gauges."""
+    while True:
+        try:
+            metrics.update_buffers(
+                data_manager.orderbook_buffers,
+                data_manager.trade_buffers,
+            )
+            metrics.update_queues(
+                data_manager.event_queue.qsize(),
+                output_queue.qsize(),
+            )
+            await asyncio.sleep(5)
         except asyncio.CancelledError:
             break
 
@@ -95,14 +121,26 @@ async def main() -> None:
     for adapter in data_manager._adapters:
         await adapter.subscribe(market_ids)
 
+    # --- Metrics ---
+    metrics: MetricsCollector | None = None
+    if settings.metrics_enabled:
+        metrics = MetricsCollector(port=settings.metrics_port)
+        metrics.start()
+
     # --- Data persistence ---
     collector = FeatureCollector(settings.feature_output_dir)
 
     # --- Run ---
     output_task = asyncio.create_task(
-        log_output(runner.output_queue, collector)
+        log_output(runner.output_queue, collector, metrics)
     )
     runner_task = asyncio.create_task(runner.run())
+
+    infra_task: asyncio.Task[None] | None = None
+    if metrics is not None:
+        infra_task = asyncio.create_task(
+            poll_infrastructure_metrics(metrics, data_manager, runner.output_queue)
+        )
 
     # Graceful shutdown
     stop = asyncio.Event()
@@ -121,6 +159,8 @@ async def main() -> None:
     await data_manager.stop()
     runner_task.cancel()
     output_task.cancel()
+    if infra_task is not None:
+        infra_task.cancel()
     collector.close()
     logger.info("pipeline_stopped")
 

@@ -69,7 +69,7 @@ class Markouts(Feature):
         trade_row = None
         for idx in range(tr.height - 1, -1, -1):
             candidate_ts = tr["timestamp"][idx]
-            if candidate_ts + timedelta(seconds=max_horizon) <= ob_max_ts:
+            if candidate_ts + max_horizon <= ob_max_ts:
                 trade_row = tr.row(idx, named=True)
                 break
 
@@ -88,7 +88,7 @@ class Markouts(Feature):
         all_horizons_filled = True
 
         for horizon in _MARKOUT_HORIZONS_SECONDS:
-            target_ts = trade_ts + timedelta(seconds=horizon)
+            target_ts = trade_ts + horizon
 
             # Find the orderbook snapshot closest to target_ts (at or after)
             after_target = ob.filter(pl.col("timestamp") >= target_ts)
@@ -97,7 +97,12 @@ class Markouts(Feature):
                 all_horizons_filled = False
                 continue
 
-            mid_at_horizon = float(after_target["mid_price"][0])
+            mid_val = after_target["mid_price"][0]
+            if mid_val is None:
+                markouts[f"markout_{horizon}s"] = None
+                all_horizons_filled = False
+                continue
+            mid_at_horizon = float(mid_val)
             raw_markout = mid_at_horizon - trade_price
             adjusted_markout = raw_markout * side_multiplier
             markouts[f"markout_{horizon}s"] = round(adjusted_markout, 8)

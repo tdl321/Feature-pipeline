@@ -31,13 +31,13 @@ def _parse_datetime(s: str) -> datetime:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate feature analysis charts from JSONL data.",
+        description="Generate feature analysis charts from Parquet data.",
     )
     parser.add_argument(
         "input",
         type=Path,
         nargs="+",
-        help="JSONL file(s) or directory containing JSONL files.",
+        help="Parquet file(s) or directory containing Parquet files.",
     )
     parser.add_argument(
         "-m", "--market-id",
