@@ -41,6 +41,8 @@ class DataManager:
         self._event_queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
         self._running = False
         self._tasks: list[asyncio.Task[None]] = []
+        # Tracks last seen sequence_num per market for gap/reorder detection
+        self._last_sequence: dict[str, int] = {}
 
     # -- Adapter registration -----------------------------------------------
 
@@ -115,6 +117,7 @@ class DataManager:
         async for ob in adapter.stream_orderbooks():
             if not self._running:
                 break
+            self._validate_sequence(ob.market_id, ob.sequence_num)
             buf = self.get_orderbook_buffer(ob.market_id)
             record = _orderbook_to_record(ob, max_depth=max_depth)
             buf.append(record)
@@ -123,6 +126,7 @@ class DataManager:
                 "exchange": ob.exchange,
                 "market_id": ob.market_id,
                 "timestamp": record["timestamp"],
+                "event_id": ob.event_id,
             })
 
     async def _consume_trades(self, adapter: Any) -> None:
@@ -130,6 +134,7 @@ class DataManager:
         async for trade in adapter.stream_trades():
             if not self._running:
                 break
+            self._validate_sequence(trade.market_id, trade.sequence_num)
             buf = self.get_trade_buffer(trade.market_id)
             record = _trade_to_record(trade)
             buf.append(record)
@@ -138,7 +143,25 @@ class DataManager:
                 "exchange": trade.exchange,
                 "market_id": trade.market_id,
                 "timestamp": record["timestamp"],
+                "event_id": trade.event_id,
             })
+
+    def _validate_sequence(self, market_id: str, sequence_num: int) -> None:
+        """Log a warning if sequence numbers have a gap or reorder.
+
+        Never raises -- the pipeline continues processing regardless.
+        """
+        if sequence_num == 0:
+            return  # default / unset -- nothing to validate
+        last = self._last_sequence.get(market_id, 0)
+        if last > 0 and sequence_num != last + 1:
+            logger.warning(
+                "sequence_gap_detected",
+                market_id=market_id,
+                expected=last + 1,
+                received=sequence_num,
+            )
+        self._last_sequence[market_id] = sequence_num
 
     async def _eviction_loop(self) -> None:
         """Periodically evict expired records from all buffers."""
@@ -163,11 +186,22 @@ def _orderbook_to_record(
     ``top_n_bid_depth`` / ``top_n_ask_depth`` aggregate fields.  The full
     ``bid_depth`` / ``ask_depth`` fields sum *all* levels in the book for
     backward compatibility.
+
+    Timestamps are preserved from the original event.  ``ingestion_ts``
+    records when the record entered the buffer.  The ``timestamp`` field
+    uses ``local_timestamp`` (epoch seconds) for backward compatibility
+    with downstream consumers that index on it.
     """
     top_bids = ob.bids[:max_depth]
     top_asks = ob.asks[:max_depth]
     return {
-        "timestamp": time.time(),
+        "timestamp": ob.local_timestamp.timestamp(),
+        "exchange_timestamp": (
+            ob.exchange_timestamp.timestamp() if ob.exchange_timestamp else None
+        ),
+        "ingestion_ts": time.time(),
+        "event_id": ob.event_id,
+        "sequence_num": ob.sequence_num,
         "exchange": ob.exchange,
         "market_id": ob.market_id,
         "asset_id": ob.asset_id,
@@ -188,9 +222,19 @@ def _orderbook_to_record(
 
 
 def _trade_to_record(trade: NormalizedTrade) -> dict[str, Any]:
-    """Flatten a ``NormalizedTrade`` into a dict suitable for buffering."""
+    """Flatten a ``NormalizedTrade`` into a dict suitable for buffering.
+
+    Timestamps are preserved from the original event.  ``ingestion_ts``
+    records when the record entered the buffer.
+    """
     return {
-        "timestamp": time.time(),
+        "timestamp": trade.local_timestamp.timestamp(),
+        "exchange_timestamp": (
+            trade.exchange_timestamp.timestamp() if trade.exchange_timestamp else None
+        ),
+        "ingestion_ts": time.time(),
+        "event_id": trade.event_id,
+        "sequence_num": trade.sequence_num,
         "exchange": trade.exchange,
         "market_id": trade.market_id,
         "asset_id": trade.asset_id,

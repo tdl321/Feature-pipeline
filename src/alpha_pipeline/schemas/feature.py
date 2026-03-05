@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import uuid4
 
 import orjson
 from pydantic import BaseModel, ConfigDict, Field
@@ -40,6 +41,8 @@ class FeatureOutput(BaseModel):
     timestamp: datetime
     market_id: str
     values: dict[str, float | int | bool | str | None]
+    correlation_id: str = Field(default_factory=lambda: str(uuid4()))
+    trigger_event_ids: tuple[str, ...] = ()
 
     # -- Serialization ------------------------------------------------------
 
@@ -62,6 +65,8 @@ class FeatureVector(BaseModel):
     market_id: str
     exchange: ExchangeId
     features: tuple[FeatureOutput, ...]
+    correlation_id: str = Field(default_factory=lambda: str(uuid4()))
+    trigger_event_ids: tuple[str, ...] = ()
 
     # -- Serialization ------------------------------------------------------
 

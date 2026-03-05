@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from uuid import uuid4
 
 import polars as pl
 import structlog
+import structlog.contextvars
 
 from alpha_pipeline.data.buffer import TimeSeriesBuffer
 from alpha_pipeline.features.registry import FeatureRegistry
@@ -47,9 +49,18 @@ class FeatureRunner:
 
             market_id = event.get("market_id", "")
             exchange = event.get("exchange", "")
+            trigger_event_id = event.get("event_id", "")
+            correlation_id = str(uuid4())
 
+            # Bind correlation_id to structlog context for this cycle
+            structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
             try:
-                vector = self._compute_features(market_id, exchange)
+                vector = self._compute_features(
+                    market_id,
+                    exchange,
+                    correlation_id=correlation_id,
+                    trigger_event_id=trigger_event_id,
+                )
                 if vector and vector.features:
                     await self._output_queue.put(vector)
                     logger.debug(
@@ -59,12 +70,19 @@ class FeatureRunner:
                     )
             except Exception:
                 logger.exception("feature_computation_error", market_id=market_id)
+            finally:
+                structlog.contextvars.unbind_contextvars("correlation_id")
 
     def stop(self) -> None:
         self._running = False
 
     def _compute_features(
-        self, market_id: str, exchange: str
+        self,
+        market_id: str,
+        exchange: str,
+        *,
+        correlation_id: str = "",
+        trigger_event_id: str = "",
     ) -> FeatureVector | None:
         """Run all enabled features for a given market."""
         ob_buf = self._ob_buffers.get(market_id)
@@ -75,6 +93,7 @@ class FeatureRunner:
             trade_buf.to_polars() if trade_buf and not trade_buf.is_empty else None
         )
 
+        trigger_ids = (trigger_event_id,) if trigger_event_id else ()
         outputs: list[FeatureOutput] = []
 
         for feature in self._registry.get_enabled():
@@ -87,6 +106,11 @@ class FeatureRunner:
                 market_id=market_id,
             )
             if result is not None:
+                # Attach traceability fields without mutating the original
+                result = result.model_copy(update={
+                    "correlation_id": correlation_id,
+                    "trigger_event_ids": trigger_ids,
+                })
                 outputs.append(result)
 
         if not outputs:
@@ -97,6 +121,8 @@ class FeatureRunner:
             market_id=market_id,
             exchange=ExchangeId(exchange) if exchange else ExchangeId.POLYMARKET,
             features=tuple(outputs),
+            correlation_id=correlation_id,
+            trigger_event_ids=trigger_ids,
         )
 
     @property

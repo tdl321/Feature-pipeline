@@ -57,6 +57,10 @@ class FeatureCollector:
                 "exchange": vector.exchange.value,
                 "feature_name": feat.feature_name,
                 "values_json": orjson.dumps(feat.values).decode("utf-8"),
+                "correlation_id": vector.correlation_id,
+                "trigger_event_ids": orjson.dumps(
+                    list(vector.trigger_event_ids)
+                ).decode("utf-8"),
             })
         return rows
 

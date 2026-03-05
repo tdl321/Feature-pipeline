@@ -1,12 +1,14 @@
-"""Load persisted JSONL feature data into polars DataFrames."""
+"""Load persisted Parquet feature data into polars DataFrames."""
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
 
+import orjson
 import polars as pl
 
-from alpha_pipeline.schemas.feature import FeatureVector
+from alpha_pipeline.schemas.enums import ExchangeId
+from alpha_pipeline.schemas.feature import FeatureOutput, FeatureVector
 
 
 def load_feature_vectors(
@@ -16,12 +18,12 @@ def load_feature_vectors(
     start: datetime | None = None,
     end: datetime | None = None,
 ) -> list[FeatureVector]:
-    """Read JSONL files and return filtered FeatureVectors.
+    """Read Parquet files and return filtered FeatureVectors.
 
     Parameters
     ----------
     paths:
-        JSONL file paths (or a single directory to glob ``*.jsonl`` from).
+        Parquet file paths (or a single directory to glob ``*.parquet`` from).
     market_id:
         If set, keep only vectors matching this market.
     start / end:
@@ -30,25 +32,64 @@ def load_feature_vectors(
     resolved: list[Path] = []
     for p in paths:
         if p.is_dir():
-            resolved.extend(sorted(p.glob("*.jsonl")))
+            resolved.extend(sorted(p.glob("*.parquet")))
         else:
             resolved.append(p)
 
-    vectors: list[FeatureVector] = []
+    if not resolved:
+        return []
+
+    dfs: list[pl.DataFrame] = []
     for path in resolved:
-        with open(path, "rb") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                vec = FeatureVector.from_json_bytes(line)
-                if market_id and vec.market_id != market_id:
-                    continue
-                if start and vec.timestamp < start:
-                    continue
-                if end and vec.timestamp > end:
-                    continue
-                vectors.append(vec)
+        try:
+            df = pl.read_parquet(path)
+        except Exception:
+            continue
+        if df.is_empty():
+            continue
+        dfs.append(df)
+
+    if not dfs:
+        return []
+
+    combined = pl.concat(dfs)
+
+    # Apply filters at the DataFrame level before reconstructing objects.
+    if market_id:
+        combined = combined.filter(pl.col("market_id") == market_id)
+    if start:
+        combined = combined.filter(pl.col("timestamp") >= start)
+    if end:
+        combined = combined.filter(pl.col("timestamp") <= end)
+
+    if combined.is_empty():
+        return []
+
+    # Group rows back into FeatureVectors (one vector = all rows sharing
+    # the same timestamp + market_id + exchange).
+    vectors: list[FeatureVector] = []
+    grouped = combined.group_by(["timestamp", "market_id", "exchange"], maintain_order=True)
+    for keys, group_df in grouped:
+        ts, mid, exch = keys
+        features: list[FeatureOutput] = []
+        for row in group_df.iter_rows(named=True):
+            values = orjson.loads(row["values_json"])
+            features.append(
+                FeatureOutput(
+                    feature_name=row["feature_name"],
+                    timestamp=ts,
+                    market_id=mid,
+                    values=values,
+                )
+            )
+        vectors.append(
+            FeatureVector(
+                timestamp=ts,
+                market_id=mid,
+                exchange=ExchangeId(exch),
+                features=tuple(features),
+            )
+        )
 
     return vectors
 

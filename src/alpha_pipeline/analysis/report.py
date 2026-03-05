@@ -24,7 +24,7 @@ def generate_report(
     Parameters
     ----------
     data_paths:
-        JSONL files or directories containing them.
+        Parquet files or directories containing them.
     output_dir:
         Where to save the PNG charts.
     market_id / start / end:

@@ -33,3 +33,18 @@ def setup_logging(level: str = "INFO") -> None:
 
 def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     return structlog.get_logger(name)
+
+
+def bind_correlation_id(correlation_id: str) -> None:
+    """Bind a correlation ID to the structlog context for the current task.
+
+    All log messages emitted while this binding is active will include
+    ``correlation_id`` automatically.  Call ``unbind_correlation_id()``
+    when the correlation scope ends.
+    """
+    structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
+
+
+def unbind_correlation_id() -> None:
+    """Remove the correlation ID from the structlog context."""
+    structlog.contextvars.unbind_contextvars("correlation_id")

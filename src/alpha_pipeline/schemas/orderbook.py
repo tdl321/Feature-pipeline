@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from functools import cached_property
 from typing import Self
+from uuid import uuid4
 
 import orjson
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
@@ -36,6 +37,8 @@ class NormalizedOrderbook(BaseModel):
         json_encoders={datetime: lambda v: v.isoformat()},
     )
 
+    event_id: str = Field(default_factory=lambda: str(uuid4()))
+    sequence_num: int = Field(default=0)
     exchange: ExchangeId
     market_id: str
     asset_id: str
@@ -118,6 +121,9 @@ class NormalizedOrderbook(BaseModel):
         bids_raw: list[tuple[float, float]],
         asks_raw: list[tuple[float, float]],
         exchange_timestamp: datetime | None = None,
+        *,
+        event_id: str | None = None,
+        sequence_num: int = 0,
     ) -> Self:
         """Build a NormalizedOrderbook from unsorted raw bid/ask tuples.
 
@@ -129,6 +135,8 @@ class NormalizedOrderbook(BaseModel):
             bids_raw: List of (price, size) tuples for bids (any order).
             asks_raw: List of (price, size) tuples for asks (any order).
             exchange_timestamp: Optional timestamp from the exchange.
+            event_id: Optional unique event identifier (auto-generated if omitted).
+            sequence_num: Monotonic sequence number for ordering.
 
         Returns:
             A fully validated, frozen NormalizedOrderbook instance.
@@ -141,13 +149,17 @@ class NormalizedOrderbook(BaseModel):
             OrderbookLevel(price=p, size=s)
             for p, s in sorted(asks_raw, key=lambda x: x[0])
         )
-        return cls(
-            exchange=exchange,
-            market_id=market_id,
-            asset_id=asset_id,
-            outcome=outcome,
-            bids=sorted_bids,
-            asks=sorted_asks,
-            local_timestamp=datetime.now(tz=timezone.utc),
-            exchange_timestamp=exchange_timestamp,
-        )
+        kwargs: dict = {
+            "exchange": exchange,
+            "market_id": market_id,
+            "asset_id": asset_id,
+            "outcome": outcome,
+            "bids": sorted_bids,
+            "asks": sorted_asks,
+            "local_timestamp": datetime.now(tz=timezone.utc),
+            "exchange_timestamp": exchange_timestamp,
+            "sequence_num": sequence_num,
+        }
+        if event_id is not None:
+            kwargs["event_id"] = event_id
+        return cls(**kwargs)

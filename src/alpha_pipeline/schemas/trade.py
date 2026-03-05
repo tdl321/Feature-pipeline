@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from uuid import uuid4
 
 import orjson
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,6 +22,8 @@ class NormalizedTrade(BaseModel):
         json_encoders={datetime: lambda v: v.isoformat()},
     )
 
+    event_id: str = Field(default_factory=lambda: str(uuid4()))
+    sequence_num: int = Field(default=0)
     exchange: ExchangeId
     market_id: str
     asset_id: str

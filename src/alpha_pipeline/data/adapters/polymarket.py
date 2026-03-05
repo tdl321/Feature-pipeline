@@ -51,6 +51,8 @@ class PolymarketAdapter:
         self._tasks: list[asyncio.Task[None]] = []
         # Incremental book state: {asset_id: {"bids": {price: size}, "asks": {price: size}, "market": str}}
         self._books: dict[str, dict] = {}
+        # Per-asset monotonic sequence counter for message ordering
+        self._sequence_counters: dict[str, int] = {}
 
     # -- Protocol properties / lifecycle ------------------------------------
 
@@ -72,6 +74,7 @@ class PolymarketAdapter:
             task.cancel()
         self._tasks.clear()
         self._books.clear()
+        self._sequence_counters.clear()
         if self._ws:
             await self._ws.close()
             self._ws = None
@@ -129,6 +132,12 @@ class PolymarketAdapter:
                 await asyncio.sleep(_PING_INTERVAL_SECONDS)
             except Exception:
                 break
+
+    def _next_sequence(self, asset_id: str) -> int:
+        """Return the next monotonic sequence number for *asset_id*."""
+        seq = self._sequence_counters.get(asset_id, 0) + 1
+        self._sequence_counters[asset_id] = seq
+        return seq
 
     # -- Message handling ---------------------------------------------------
 
@@ -238,6 +247,7 @@ class PolymarketAdapter:
             bids_raw=bids_raw,
             asks_raw=asks_raw,
             exchange_timestamp=exchange_ts,
+            sequence_num=self._next_sequence(asset_id),
         )
         await self._ob_queue.put(ob)
 
@@ -261,6 +271,7 @@ class PolymarketAdapter:
             size=float(data.get("size", 0)),
             side=side,
             local_timestamp=datetime.now(timezone.utc),
+            sequence_num=self._next_sequence(asset_id),
         )
         await self._trade_queue.put(trade)
 
