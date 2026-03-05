@@ -1,0 +1,18 @@
+{
+  "event_type": "book",
+  "market": "0x1234567890abcdef",
+  "asset_id": "asset_yes_001",
+  "timestamp": "1709654400000",
+  "bids": [
+    {"price": "0.55", "size": "1000"},
+    {"price": "0.54", "size": "2000"},
+    {"price": "0.53", "size": "500"},
+    {"price": "0.50", "size": "3000"}
+  ],
+  "asks": [
+    {"price": "0.57", "size": "800"},
+    {"price": "0.58", "size": "1500"},
+    {"price": "0.60", "size": "2500"},
+    {"price": "0.65", "size": "1000"}
+  ]
+}

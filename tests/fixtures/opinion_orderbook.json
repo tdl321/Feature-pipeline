@@ -1,0 +1,13 @@
+{
+  "market_id": "opinion_market_001",
+  "bids": [
+    {"price": "0.52", "size": "500"},
+    {"price": "0.51", "size": "1200"},
+    {"price": "0.50", "size": "800"}
+  ],
+  "asks": [
+    {"price": "0.58", "size": "600"},
+    {"price": "0.59", "size": "900"},
+    {"price": "0.62", "size": "1500"}
+  ]
+}
