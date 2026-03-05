@@ -107,7 +107,12 @@ class PolymarketAdapter:
                     break
                 try:
                     data = orjson.loads(raw)
-                    await self._handle_message(data)
+                    # Polymarket sends arrays for initial book snapshots
+                    if isinstance(data, list):
+                        for item in data:
+                            await self._handle_message(item)
+                    else:
+                        await self._handle_message(data)
                 except Exception:
                     logger.exception("polymarket_message_parse_error")
         except websockets.ConnectionClosed as exc:
