@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # Market matching
     market_matching_config: str = "config/markets.yaml"
 
+    # Wallet tracking
+    wallet_tracking_addresses: str = ""
+    wallet_tracking_poll_seconds: float = 60.0
+    wallet_tracking_port: int = 8001
+    wallet_tracking_pnl_timeframe: str = "7d"
+    wallet_tracking_output_dir: str = "./output/wallets"
+
 
 def get_settings() -> Settings:
     return Settings()
