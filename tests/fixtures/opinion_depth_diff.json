@@ -1,0 +1,13 @@
+{
+  "msgType": "market.depth.diff",
+  "marketId": 42,
+  "outcomeSide": 1,
+  "bids": [
+    {"price": "0.55", "size": "300"},
+    {"price": "0.52", "size": "0"}
+  ],
+  "asks": [
+    {"price": "0.60", "size": "400"},
+    {"price": "0.62", "size": "250"}
+  ]
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "slug": "eth-above-2082-09utc",
+    "title": "$ETH above $2082 at 09:00 UTC",
+    "trade_type": "clob",
+    "expiration_timestamp": 1709280000000,
+    "price_oracle_metadata": {
+      "ticker": "ETH"
+    }
+  },
+  {
+    "slug": "eth-above-2100-10utc",
+    "title": "$ETH above $2100 at 10:00 UTC",
+    "trade_type": "clob",
+    "expiration_timestamp": 1709283600000,
+    "price_oracle_metadata": {
+      "ticker": "ETH"
+    }
+  },
+  {
+    "slug": "sol-above-140-09utc",
+    "title": "$SOL above $140 at 09:00 UTC",
+    "trade_type": "clob",
+    "expiration_timestamp": 1709280000000,
+    "price_oracle_metadata": {
+      "ticker": "SOL"
+    }
+  },
+  {
+    "slug": "btc-above-60k-amm",
+    "title": "$BTC above $60k",
+    "trade_type": "amm",
+    "expiration_timestamp": 1709280000000,
+    "price_oracle_metadata": {
+      "ticker": "BTC"
+    }
+  },
+  {
+    "slug": "hbar-above-0-10-09utc",
+    "title": "$HBAR above $0.10 at 09:00 UTC",
+    "trade_type": "clob",
+    "expiration_timestamp": 1709280000000,
+    "price_oracle_metadata": {
+      "ticker": "HBAR"
+    }
+  }
+]

@@ -9,8 +9,8 @@ description = "Prediction market alpha pipeline — orderbook ingestion and feat
 requires-python = ">=3.11"
 dependencies = [
     "websockets>=13.0",
-    "python-socketio[asyncio]>=5.11",
-    "aiohttp>=3.9",
+    "limitless-sdk>=1.0.0",
+    "aiohttp>=3.11",
     "orjson>=3.9",
     "polars>=1.0",
     "pydantic>=2.5",

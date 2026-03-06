@@ -1,0 +1,9 @@
+{
+  "msgType": "market.last.trade",
+  "marketId": 42,
+  "outcomeSide": 1,
+  "side": "Buy",
+  "price": 0.58,
+  "shares": 150.0,
+  "amount": 87.0
+}

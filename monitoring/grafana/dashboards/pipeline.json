@@ -7,17 +7,37 @@
   "graphTooltip": 1,
   "id": null,
   "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "market",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "definition": "label_values(pipeline_feature_value, market_id)",
+        "query": "label_values(pipeline_feature_value, market_id)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        }
+      }
+    ]
+  },
   "panels": [
     {
       "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 200,
-      "title": "Market Microstructure",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "repeat": "market",
+      "repeatDirection": "v",
+      "title": "$market",
       "type": "row"
     },
     {
@@ -25,11 +45,10 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Top-of-book bid/ask size ratio. >0.5 = buy pressure, <0.5 = sell pressure. Z-score flags extremes.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -41,64 +60,29 @@
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "tob_imbalance_zscore"
-            },
+            "matcher": { "id": "byName", "options": "tob_imbalance_zscore" },
             "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash",
-                  "dash": [
-                    10,
-                    5
-                  ]
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
-                }
-              }
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 5] } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
             ]
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 1
-      },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 1 },
       "id": 10,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "pipeline_feature_value{value_key=~\"tob_imbalance|tob_imbalance_ma\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=~\"tob_imbalance|tob_imbalance_ma\"}",
           "legendFormat": "{{value_key}}",
           "refId": "A"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"tob_imbalance_zscore\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"tob_imbalance_zscore\"}",
           "legendFormat": "{{value_key}}",
           "refId": "B"
         }
@@ -111,11 +95,10 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "BBA spread (best_ask - best_bid). Spread % = spread/mid. Percentile ranks current spread vs rolling 5m window.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -127,64 +110,29 @@
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "spread_percentile"
-            },
+            "matcher": { "id": "byName", "options": "spread_percentile" },
             "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash",
-                  "dash": [
-                    10,
-                    5
-                  ]
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "purple"
-                }
-              }
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 5] } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "purple" } }
             ]
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
       "id": 11,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "pipeline_feature_value{value_key=~\"current_spread|avg_spread\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=~\"current_spread|avg_spread\"}",
           "legendFormat": "{{value_key}}",
           "refId": "A"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"spread_percentile\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"spread_percentile\"}",
           "legendFormat": "{{value_key}}",
           "refId": "B"
         }
@@ -197,11 +145,10 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Mid-price as implied probability [0,1]. Edge vs 50% = distance from max uncertainty. Complement edge = YES bid - (1 - YES ask).",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -213,64 +160,29 @@
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "edge_vs_50"
-            },
+            "matcher": { "id": "byName", "options": "edge_vs_50" },
             "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash",
-                  "dash": [
-                    10,
-                    5
-                  ]
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "yellow"
-                }
-              }
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 5] } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
             ]
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 1 },
       "id": 12,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "pipeline_feature_value{value_key=\"implied_prob\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"implied_prob\"}",
           "legendFormat": "{{value_key}}",
           "refId": "A"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"edge_vs_50\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"edge_vs_50\"}",
           "legendFormat": "{{value_key}}",
           "refId": "B"
         }
@@ -279,99 +191,51 @@
       "type": "timeseries"
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 300,
-      "title": "Order Flow & Toxicity",
-      "type": "row"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Rolling buy vs sell volume. Ratio >0.5 = net buying. Stacked area shows absolute buy/sell volume.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
             "fillOpacity": 30,
             "spanNulls": true,
-            "stacking": {
-              "mode": "normal"
-            },
+            "stacking": { "mode": "normal" },
             "axisPlacement": "left"
           },
           "unit": "short"
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "buy_sell_ratio"
-            },
+            "matcher": { "id": "byName", "options": "buy_sell_ratio" },
             "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.stacking",
-                "value": {
-                  "mode": "none"
-                }
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 2
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "white"
-                }
-              }
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.stacking", "value": { "mode": "none" } },
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineWidth", "value": 2 },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "white" } }
             ]
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 10
-      },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 8 },
       "id": 20,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "pipeline_feature_value{value_key=~\"buy_volume|sell_volume\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=~\"buy_volume|sell_volume\"}",
           "legendFormat": "{{value_key}}",
           "refId": "A"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"buy_sell_ratio\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"buy_sell_ratio\"}",
           "legendFormat": "{{value_key}}",
           "refId": "B"
         }
@@ -384,11 +248,10 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Z-score normalized avg trade size over 5m window. Z-score > 2.0 flags unusual sizing (retail signal).",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -400,78 +263,41 @@
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "size_zscore"
-            },
+            "matcher": { "id": "byName", "options": "size_zscore" },
             "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "orange"
-                }
-              }
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
             ]
           },
           {
-            "matcher": {
-              "id": "byName",
-              "options": "is_retail_signal"
-            },
+            "matcher": { "id": "byName", "options": "is_retail_signal" },
             "properties": [
-              {
-                "id": "custom.drawStyle",
-                "value": "points"
-              },
-              {
-                "id": "custom.pointSize",
-                "value": 8
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "cyan"
-                }
-              }
+              { "id": "custom.drawStyle", "value": "points" },
+              { "id": "custom.pointSize", "value": 8 },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "cyan" } }
             ]
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 10
-      },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 8 },
       "id": 21,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "pipeline_feature_value{value_key=\"avg_trade_size\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"avg_trade_size\"}",
           "legendFormat": "{{value_key}}",
           "refId": "A"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"size_zscore\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"size_zscore\"}",
           "legendFormat": "{{value_key}}",
           "refId": "B"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"is_retail_signal\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"is_retail_signal\"}",
           "legendFormat": "{{value_key}}",
           "refId": "C"
         }
@@ -484,11 +310,10 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
+      "description": "Markouts: post-trade price change at 1s/5s/30s/60s. Positive = toxic (informed) flow. Wash ratio = trades inside spread.",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
+          "color": { "mode": "palette-classic" },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -500,79 +325,39 @@
         },
         "overrides": [
           {
-            "matcher": {
-              "id": "byName",
-              "options": "wash_trade_ratio"
-            },
+            "matcher": { "id": "byName", "options": "wash_trade_ratio" },
             "properties": [
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
-              {
-                "id": "custom.drawStyle",
-                "value": "line"
-              },
-              {
-                "id": "custom.lineStyle",
-                "value": {
-                  "fill": "dash",
-                  "dash": [
-                    10,
-                    5
-                  ]
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "red"
-                }
-              }
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 5] } },
+              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
             ]
           }
         ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 10
-      },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 8 },
       "id": 22,
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "pipeline_feature_value{value_key=~\"markout_1s|markout_5s|markout_30s|markout_60s\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=~\"markout_1s|markout_5s|markout_30s|markout_60s\"}",
           "legendFormat": "{{value_key}}",
           "refId": "A"
         },
         {
-          "expr": "pipeline_feature_value{value_key=\"wash_trade_ratio\"}",
+          "expr": "pipeline_feature_value{market_id=\"$market\", value_key=\"wash_trade_ratio\"}",
           "legendFormat": "{{value_key}}",
           "refId": "B"
         }
       ],
-      "title": "Toxicity",
+      "title": "Toxicity & Wash",
       "type": "timeseries"
     },
     {
       "collapsed": true,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 18
-      },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 100 },
       "id": 400,
       "title": "Pipeline Health",
       "type": "row",
@@ -584,9 +369,7 @@
           },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
+              "color": { "mode": "palette-classic" },
               "custom": {
                 "drawStyle": "line",
                 "lineWidth": 1,
@@ -597,21 +380,11 @@
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 6,
-            "w": 6,
-            "x": 0,
-            "y": 19
-          },
+          "gridPos": { "h": 6, "w": 6, "x": 0, "y": 101 },
           "id": 30,
           "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi"
-            }
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
@@ -620,7 +393,7 @@
               "refId": "A"
             }
           ],
-          "title": "Throughput",
+          "title": "Throughput (features/sec)",
           "type": "timeseries"
         },
         {
@@ -630,10 +403,7 @@
           },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "fixed",
-                "fixedColor": "red"
-              },
+              "color": { "mode": "fixed", "fixedColor": "red" },
               "custom": {
                 "drawStyle": "bars",
                 "lineWidth": 1,
@@ -643,21 +413,11 @@
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 6,
-            "w": 6,
-            "x": 6,
-            "y": 19
-          },
+          "gridPos": { "h": 6, "w": 6, "x": 6, "y": 101 },
           "id": 31,
           "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi"
-            }
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
@@ -666,7 +426,7 @@
               "refId": "A"
             }
           ],
-          "title": "Errors",
+          "title": "Errors (errors/sec)",
           "type": "timeseries"
         },
         {
@@ -676,9 +436,7 @@
           },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
+              "color": { "mode": "palette-classic" },
               "custom": {
                 "drawStyle": "line",
                 "lineWidth": 1,
@@ -689,26 +447,16 @@
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 6,
-            "w": 6,
-            "x": 12,
-            "y": 19
-          },
+          "gridPos": { "h": 6, "w": 6, "x": 12, "y": 101 },
           "id": 32,
           "options": {
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "multi"
-            }
+            "legend": { "displayMode": "list", "placement": "bottom" },
+            "tooltip": { "mode": "multi" }
           },
           "targets": [
             {
               "expr": "pipeline_buffer_size",
-              "legendFormat": "buffer: {{buffer_type}}",
+              "legendFormat": "{{buffer_type}} — {{market_id}}",
               "refId": "A"
             },
             {
@@ -717,7 +465,7 @@
               "refId": "B"
             }
           ],
-          "title": "Buffers & Queues",
+          "title": "Buffers & Queues (rows)",
           "type": "timeseries"
         },
         {
@@ -727,20 +475,12 @@
           },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
+              "color": { "mode": "thresholds" },
               "mappings": [
                 {
                   "options": {
-                    "0": {
-                      "color": "red",
-                      "text": "DOWN"
-                    },
-                    "1": {
-                      "color": "green",
-                      "text": "UP"
-                    }
+                    "0": { "color": "red", "text": "DOWN" },
+                    "1": { "color": "green", "text": "UP" }
                   },
                   "type": "value"
                 }
@@ -748,33 +488,20 @@
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  {
-                    "color": "red",
-                    "value": null
-                  },
-                  {
-                    "color": "green",
-                    "value": 1
-                  }
+                  { "color": "red", "value": null },
+                  { "color": "green", "value": 1 }
                 ]
               }
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 6,
-            "w": 6,
-            "x": 18,
-            "y": 19
-          },
+          "gridPos": { "h": 6, "w": 6, "x": 18, "y": 101 },
           "id": 33,
           "options": {
             "colorMode": "background",
             "graphMode": "none",
             "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ]
+              "calcs": ["lastNotNull"]
             },
             "textMode": "auto"
           },
@@ -785,7 +512,7 @@
               "refId": "A"
             }
           ],
-          "title": "Connection",
+          "title": "Connection Status",
           "type": "stat"
         }
       ]
@@ -793,12 +520,7 @@
   ],
   "refresh": "5s",
   "schemaVersion": 39,
-  "tags": [
-    "alpha-pipeline"
-  ],
-  "templating": {
-    "list": []
-  },
+  "tags": ["alpha-pipeline"],
   "time": {
     "from": "now-15m",
     "to": "now"
@@ -807,5 +529,5 @@
   "timezone": "browser",
   "title": "Alpha Pipeline",
   "uid": "alpha-pipeline",
-  "version": 2
+  "version": 3
 }

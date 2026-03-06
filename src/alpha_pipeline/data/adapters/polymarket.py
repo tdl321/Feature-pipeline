@@ -53,6 +53,8 @@ class PolymarketAdapter:
         self._books: dict[str, dict] = {}
         # Per-asset monotonic sequence counter for message ordering
         self._sequence_counters: dict[str, int] = {}
+        # Maps asset_id -> OutcomeType (YES or NO). Defaults to YES for backward compat.
+        self._asset_outcome_map: dict[str, OutcomeType] = {}
 
     # -- Protocol properties / lifecycle ------------------------------------
 
@@ -80,12 +82,23 @@ class PolymarketAdapter:
             self._ws = None
         logger.info("polymarket_disconnected")
 
-    async def subscribe(self, market_ids: list[str]) -> None:
+    async def subscribe(
+        self,
+        market_ids: list[str],
+        asset_outcome_map: dict[str, OutcomeType] | None = None,
+    ) -> None:
         """Subscribe to market channels.
 
         Polymarket expects the field ``assets_ids`` (their actual API name).
+
+        Args:
+            market_ids: Asset IDs to subscribe to.
+            asset_outcome_map: Optional mapping of asset_id -> OutcomeType.
+                If not provided, all assets default to YES (backward compatible).
         """
         self._market_ids = market_ids
+        if asset_outcome_map is not None:
+            self._asset_outcome_map = dict(asset_outcome_map)
         if not self._ws:
             raise RuntimeError("Must call connect() before subscribe()")
         msg = orjson.dumps({
@@ -239,11 +252,12 @@ class PolymarketAdapter:
             key=lambda x: x[0],
         )[:max_depth]
 
+        outcome = self._asset_outcome_map.get(asset_id, OutcomeType.YES)
         ob = NormalizedOrderbook.from_raw(
             exchange=ExchangeId.POLYMARKET,
             market_id=book["market"],
             asset_id=asset_id,
-            outcome=OutcomeType.YES,
+            outcome=outcome,
             bids_raw=bids_raw,
             asks_raw=asks_raw,
             exchange_timestamp=exchange_ts,
@@ -262,11 +276,12 @@ class PolymarketAdapter:
             else Side.SELL
         )
 
+        outcome = self._asset_outcome_map.get(asset_id, OutcomeType.YES)
         trade = NormalizedTrade(
             exchange=ExchangeId.POLYMARKET,
             market_id=market_id,
             asset_id=asset_id,
-            outcome=OutcomeType.YES,
+            outcome=outcome,
             price=float(data.get("price", 0)),
             size=float(data.get("size", 0)),
             side=side,

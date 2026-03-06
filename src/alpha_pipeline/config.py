@@ -12,12 +12,18 @@ class Settings(BaseSettings):
 
     # Opinion
     opinion_api_url: str = "https://api.opinion.xyz"
+    opinion_ws_url: str = "wss://ws.opinion.trade"
     opinion_api_key: str = ""
     opinion_poll_interval_seconds: float = 2.0
 
     # Limitless
-    limitless_ws_url: str = "wss://api.limitless.exchange"
-    limitless_jwt_token: str = ""
+    limitless_ws_url: str = "wss://ws.limitless.exchange"
+    limitless_api_url: str = "https://api.limitless.exchange"
+    limitless_api_key: str = ""
+
+    # Limitless roster (auto-discovery)
+    limitless_roster_poll_seconds: float = 30.0
+    limitless_roster_expiry_grace_seconds: float = 300.0
 
     # Pipeline
     buffer_max_rows: int = 100_000

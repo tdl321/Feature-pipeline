@@ -82,6 +82,26 @@ class DataManager:
     def event_queue(self) -> asyncio.Queue[dict[str, Any]]:
         return self._event_queue
 
+    # -- Market cleanup -----------------------------------------------------
+
+    def cleanup_market(self, market_id: str) -> None:
+        """Remove all buffers and sequence tracking for an expired market.
+
+        Called by the roster loop after a market expires + grace period.
+        """
+        removed = False
+        if market_id in self._orderbook_buffers:
+            del self._orderbook_buffers[market_id]
+            removed = True
+        if market_id in self._trade_buffers:
+            del self._trade_buffers[market_id]
+            removed = True
+        if market_id in self._last_sequence:
+            del self._last_sequence[market_id]
+            removed = True
+        if removed:
+            logger.info("market_cleaned_up", market_id=market_id)
+
     # -- Lifecycle ----------------------------------------------------------
 
     async def start(self) -> None:
