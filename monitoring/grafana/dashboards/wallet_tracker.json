@@ -1,0 +1,518 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "wallet",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "definition": "label_values(wallet_position_count, wallet)",
+        "query": "label_values(wallet_position_count, wallet)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        }
+      },
+      {
+        "name": "exchange",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "definition": "label_values(wallet_position_count, exchange)",
+        "query": "label_values(wallet_position_count, exchange)",
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Overview Stats",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Total PnL (wallet_total_pnl_usd)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "wallet_total_pnl_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{wallet}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 0 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "PnL % Change (wallet_pnl_percent_change)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "wallet_pnl_percent_change{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{wallet}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Position Count (wallet_position_count)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "wallet_position_count{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{wallet}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "title": "Traded Volume (wallet_traded_volume_usd)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "wallet_traded_volume_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{wallet}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "PnL Over Time",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 5,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "bottom" }
+      },
+      "title": "Total PnL Over Time (wallet_total_pnl_usd)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "wallet_total_pnl_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{wallet}} PnL",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 6,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "table", "placement": "bottom" }
+      },
+      "title": "PnL % Change Over Time (wallet_pnl_percent_change)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "wallet_pnl_percent_change{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{wallet}} %",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 102,
+      "title": "Position Breakdown",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "none" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 7,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "PnL by Market (wallet_position_unrealized_pnl_usd)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "wallet_position_unrealized_pnl_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{market}} ({{outcome}})",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": { "mode": "none" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 8,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "Market Value by Market (wallet_position_market_value_usd)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "wallet_position_market_value_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "{{market}} ({{outcome}})",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 103,
+      "title": "Position Details",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Shares" },
+            "properties": [{ "id": "unit", "value": "short" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Cost USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Market Value USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Realized PnL USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Unrealized PnL USD" },
+            "properties": [{ "id": "unit", "value": "currencyUSD" }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Fill Price" },
+            "properties": [{ "id": "decimals", "value": 4 }]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+      "id": 9,
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Unrealized PnL USD", "desc": true }]
+      },
+      "title": "All Positions",
+      "type": "table",
+      "targets": [
+        {
+          "expr": "wallet_position_shares{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "",
+          "refId": "Shares",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "wallet_position_cost_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "",
+          "refId": "Cost USD",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "wallet_position_market_value_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "",
+          "refId": "Market Value USD",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "wallet_position_realized_pnl_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "",
+          "refId": "Realized PnL USD",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "wallet_position_unrealized_pnl_usd{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "",
+          "refId": "Unrealized PnL USD",
+          "format": "table",
+          "instant": true
+        },
+        {
+          "expr": "wallet_position_fill_price{wallet=~\"$wallet\", exchange=~\"$exchange\"}",
+          "legendFormat": "",
+          "refId": "Fill Price",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": { "byField": "market" }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "Time 1": true, "Time 2": true, "Time 3": true, "Time 4": true, "Time 5": true },
+            "renameByName": {
+              "market": "Market",
+              "wallet": "Wallet",
+              "exchange": "Exchange",
+              "outcome": "Outcome",
+              "Value #Shares": "Shares",
+              "Value #Cost USD": "Cost USD",
+              "Value #Market Value USD": "Market Value USD",
+              "Value #Realized PnL USD": "Realized PnL USD",
+              "Value #Unrealized PnL USD": "Unrealized PnL USD",
+              "Value #Fill Price": "Fill Price"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 104,
+      "title": "Health",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 35 },
+      "id": 10,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "Poll Rate (rate(wallet_poll_total[5m]))",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(wallet_poll_total{wallet=~\"$wallet\", exchange=~\"$exchange\"}[5m])",
+          "legendFormat": "{{wallet}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.01 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 35 },
+      "id": 11,
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "title": "Error Rate (rate(wallet_poll_errors_total[5m]))",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(wallet_poll_errors_total{wallet=~\"$wallet\", exchange=~\"$exchange\"}[5m])",
+          "legendFormat": "{{wallet}} errors",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["wallet", "tracking"],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Wallet Tracker",
+  "uid": "wallet-tracker-v1",
+  "version": 1
+}
